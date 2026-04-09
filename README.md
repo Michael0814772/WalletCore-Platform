@@ -1,4 +1,4 @@
-## WalletCore
+## WalletCore Platform
 
 WalletCore is a backend-focused digital wallet platform designed to simulate how modern payment systems handle transactions, security, scalability, and reliability. The system is built using a microservices architecture where each service manages a specific business domain such as authentication, wallet management, transaction processing, and notifications.
 

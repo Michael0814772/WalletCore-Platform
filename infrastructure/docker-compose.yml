@@ -1,0 +1,12 @@
+services:
+  kafka:
+    image: apache/kafka:latest
+    container_name: walletcore-kafka
+
+  postgres:
+    image: postgres:16
+    container_name: walletcore-postgres
+
+  redis:
+    image: redis:7
+    container_name: walletcore-redis
