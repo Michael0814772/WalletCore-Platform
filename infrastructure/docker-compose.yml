@@ -1,12 +1,216 @@
 services:
-  kafka:
-    image: apache/kafka:latest
-    container_name: walletcore-kafka
-
   postgres:
     image: postgres:16
     container_name: walletcore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: walletcore
+      POSTGRES_PASSWORD: walletcore
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U walletcore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - walletcore-net
 
   redis:
     image: redis:7
     container_name: walletcore-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - walletcore-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: walletcore-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - walletcore-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: walletcore-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    ports:
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    networks:
+      - walletcore-net
+
+  walletcore-auth-service:
+    build:
+      context: ..
+      dockerfile: auth-service/Dockerfile
+    container_name: walletcore-auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: walletcore-auth-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: walletcore
+      SPRING_DATASOURCE_PASSWORD: walletcore
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - walletcore-net
+
+  walletcore-wallet-service:
+    build:
+      context: ..
+      dockerfile: wallet-service/Dockerfile
+    container_name: walletcore-wallet-service
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: walletcore-wallet-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wallet_db
+      SPRING_DATASOURCE_USERNAME: walletcore
+      SPRING_DATASOURCE_PASSWORD: walletcore
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - walletcore-net
+
+  walletcore-transaction-service:
+    build:
+      context: ..
+      dockerfile: transaction-service/Dockerfile
+    container_name: walletcore-transaction-service
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: walletcore-transaction-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transaction_db
+      SPRING_DATASOURCE_USERNAME: walletcore
+      SPRING_DATASOURCE_PASSWORD: walletcore
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - walletcore-net
+
+  walletcore-notification-service:
+    build:
+      context: ..
+      dockerfile: notification-service/Dockerfile
+    container_name: walletcore-notification-service
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: walletcore-notification-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: walletcore
+      SPRING_DATASOURCE_PASSWORD: walletcore
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - walletcore-net
+
+  walletcore-api-gateway:
+    build:
+      context: ..
+      dockerfile: api-gateway/Dockerfile
+    container_name: walletcore-api-gateway
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: walletcore-api-gateway
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gateway_db
+      SPRING_DATASOURCE_USERNAME: walletcore
+      SPRING_DATASOURCE_PASSWORD: walletcore
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      walletcore-auth-service:
+        condition: service_started
+      walletcore-wallet-service:
+        condition: service_started
+      walletcore-transaction-service:
+        condition: service_started
+      walletcore-notification-service:
+        condition: service_started
+    networks:
+      - walletcore-net
+
+networks:
+  walletcore-net:
+    name: walletcore-net
+
+volumes:
+  postgres-data:
+  redis-data:
