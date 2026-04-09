@@ -84,6 +84,8 @@ services:
     build:
       context: ..
       dockerfile: auth-service/Dockerfile
+      args:
+        SERVICE_NAME: auth-service
     container_name: walletcore-auth-service
     restart: unless-stopped
     environment:
@@ -109,6 +111,8 @@ services:
     build:
       context: ..
       dockerfile: wallet-service/Dockerfile
+      args:
+        SERVICE_NAME: wallet-service
     container_name: walletcore-wallet-service
     restart: unless-stopped
     environment:
@@ -134,6 +138,8 @@ services:
     build:
       context: ..
       dockerfile: transaction-service/Dockerfile
+      args:
+        SERVICE_NAME: transaction-service
     container_name: walletcore-transaction-service
     restart: unless-stopped
     environment:
@@ -159,6 +165,8 @@ services:
     build:
       context: ..
       dockerfile: notification-service/Dockerfile
+      args:
+        SERVICE_NAME: notification-service
     container_name: walletcore-notification-service
     restart: unless-stopped
     environment:
@@ -184,6 +192,8 @@ services:
     build:
       context: ..
       dockerfile: api-gateway/Dockerfile
+      args:
+        SERVICE_NAME: api-gateway
     container_name: walletcore-api-gateway
     restart: unless-stopped
     environment:
