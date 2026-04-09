@@ -7,3 +7,5 @@
 **/.DS_Store
 **/*.iml
 **/node_modules
+.env
+.env.*
