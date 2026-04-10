@@ -5,7 +5,11 @@ ARG SERVICE_NAME
 
 COPY pom.xml pom.xml
 COPY common-lib/pom.xml common-lib/pom.xml
-COPY ${SERVICE_NAME}/pom.xml ${SERVICE_NAME}/pom.xml
+COPY auth-service/pom.xml auth-service/pom.xml
+COPY wallet-service/pom.xml wallet-service/pom.xml
+COPY transaction-service/pom.xml transaction-service/pom.xml
+COPY notification-service/pom.xml notification-service/pom.xml
+COPY api-gateway/pom.xml api-gateway/pom.xml
 
 RUN mvn -q -DskipTests dependency:go-offline -pl ${SERVICE_NAME} -am
 

@@ -1,0 +1,28 @@
+# Maven
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+release.properties
+.flattened-pom.xml
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env / secrets (keep .env.example if you add one)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
