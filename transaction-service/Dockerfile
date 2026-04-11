@@ -20,6 +20,8 @@ RUN mvn -q -DskipTests package -pl ${SERVICE_NAME} -am
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 
+ARG SERVICE_NAME
+
 ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseStringDeduplication"
 
 RUN groupadd -g 10001 app && useradd -u 10001 -g app -m -s /usr/sbin/nologin app
