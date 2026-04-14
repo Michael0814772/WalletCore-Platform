@@ -127,6 +127,21 @@ From repo root:
 docker compose -f infrastructure/docker-compose.yml up -d --build
 ```
 
+### Option: sequential builds (if `--build` fails due to network)
+
+If you hit transient network/TLS errors while pulling Maven dependencies during image builds, build each service image one-by-one (this avoids parallel downloads).
+
+From repo root:
+
+```bash
+docker compose -f infrastructure/docker-compose.yml build walletcore-auth-service
+docker compose -f infrastructure/docker-compose.yml build walletcore-wallet-service
+docker compose -f infrastructure/docker-compose.yml build walletcore-transaction-service
+docker compose -f infrastructure/docker-compose.yml build walletcore-notification-service
+docker compose -f infrastructure/docker-compose.yml build walletcore-api-gateway
+docker compose -f infrastructure/docker-compose.yml up -d
+```
+
 Stop:
 
 ```bash
@@ -148,4 +163,11 @@ docker compose -f infrastructure/docker-compose.yml down -v
 - **Kafka client can’t connect from host**
   - Use `localhost:29092` from your machine.
   - Use `kafka:9092` from other containers.
+
+- **View logs for a specific service**
+  - From repo root:
+
+```bash
+docker compose -f infrastructure/docker-compose.yml logs --tail=50 {service name}
+```
 
