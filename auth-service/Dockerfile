@@ -11,12 +11,25 @@ COPY transaction-service/pom.xml transaction-service/pom.xml
 COPY notification-service/pom.xml notification-service/pom.xml
 COPY api-gateway/pom.xml api-gateway/pom.xml
 
-RUN mvn -q -DskipTests dependency:go-offline -pl ${SERVICE_NAME} -am
+RUN mvn -q -DskipTests \
+    -Dmaven.wagon.http.retryHandler.count=5 \
+    -Dhttps.protocols=TLSv1.2 \
+    -Djdk.tls.client.protocols=TLSv1.2 \
+    dependency:go-offline -pl ${SERVICE_NAME} -am
 
 COPY common-lib/src common-lib/src
 COPY ${SERVICE_NAME}/src ${SERVICE_NAME}/src
 
-RUN mvn -q -DskipTests package -pl ${SERVICE_NAME} -am
+RUN mvn -q -DskipTests \
+    -Dmaven.wagon.http.retryHandler.count=5 \
+    -Dhttps.protocols=TLSv1.2 \
+    -Djdk.tls.client.protocols=TLSv1.2 \
+    package -pl ${SERVICE_NAME} -am
+
+RUN set -eux; \
+    JAR="$(find "/workspace/${SERVICE_NAME}/target" -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"; \
+    test -n "$JAR"; \
+    cp "$JAR" "/workspace/${SERVICE_NAME}/target/app.jar"
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 
@@ -28,7 +41,7 @@ RUN groupadd -g 10001 app && useradd -u 10001 -g app -m -s /usr/sbin/nologin app
 
 WORKDIR /app
 
-COPY --from=build /workspace/${SERVICE_NAME}/target/*.jar /app/app.jar
+COPY --from=build /workspace/${SERVICE_NAME}/target/app.jar /app/app.jar
 
 USER app
 
